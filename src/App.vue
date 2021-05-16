@@ -13,11 +13,12 @@
     >              
       <el-button type="text" :disabled="!!outdata">{{text}}</el-button>                         
     </el-upload>
+    <div v-for="(item, index) in outdata" :key="item['__EMPTY']" :id="'main' + index" style="width: 752px;height:452px;display: none"></div>
   </div>
 </template>
 
 <script>
-
+import * as echarts from 'echarts';
 export default {
   name: 'App',
   data() {
@@ -26,7 +27,7 @@ export default {
 		  file:"",
       outdata: null,
       text: '点击上传',
-      demo: null
+      average: null,
     }
   },
   methods: {
@@ -48,13 +49,88 @@ export default {
           type: 'binary'            
         })            
         let outdata = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]])            
-        console.log(outdata)
-        this.outdata = outdata
         this.text = "上传成功"
+        this.average = outdata.shift()
+        this.outdata = outdata
+        this.$nextTick(() => {
+          outdata.forEach((item,index) => {
+            this.echartsInit(item, index)
+          })                    
+        })
 
-        // test
-        this.$set(this,'demo',outdata[0])
+        
       }
+    },
+    echartsInit(data, index){
+
+        var myChart = echarts.init(document.getElementById(`main${index}`));
+        let text = `${data['__EMPTY'] || data['姓名'] || ''}单元反馈表`
+        
+        // 指定图表的配置项和数据
+        var option = {
+            title: {
+                text
+            },
+            animation: false,
+            tooltip: {},
+            legend: {
+                data:['班内平均值','单课积分']
+            },
+            xAxis: {
+                data: Object.keys(data).filter(item => item.indexOf('EMPTY') < 0)
+            },
+            yAxis: {},
+            series: [{
+                name: '单课积分',
+                type: 'line',
+                data: Object.values(data).filter(item => this.isNumber(item))
+            },{
+                name: '班内平均值',
+                type: 'line',
+                data: Object.values(this.average).filter(item => this.isNumber(item))
+            }],
+            toolbox: {
+              feature: {
+                saveAsImage: {
+                  type: 'png',
+                  name: text,
+                  backgroundColor: 'rgba(128, 128, 128, 0)',
+                  title: ''
+                }
+              }
+            }
+        };
+
+        // 使用刚指定的配置项和数据显示图表。
+        myChart.setOption(option);
+
+        var picInfo = myChart.getDataURL();
+        this.downloadFile(text, picInfo)
+    },
+    isNumber(val) {
+    　　if (parseFloat(val).toString() == "NaN") {
+    　　　　return false;
+    　　} else {
+    　　　　return true;
+    　　}
+    },
+    downloadFile(title, url) { //下载base64图片
+        // if (window.navigator.msSaveOrOpenBlob) {
+        //   var bstr = atob(fileName.split(',')[1])
+        //   var n = bstr.length
+        //   var u8arr = new Uint8Array(n)
+        //   while (n--) {
+        //     u8arr[n] = bstr.charCodeAt(n)
+        //   }
+        //   var blob = new Blob([u8arr])
+        //   window.navigator.msSaveOrOpenBlob(blob, 'chart-download' + '.' + 'png')
+        // } else {
+          // 这里就按照chrome等新版浏览器来处理
+          const a = document.createElement('a')
+          a.href = url
+          a.setAttribute('download', title)
+          a.click()
+        // }
     }
   }
 }
