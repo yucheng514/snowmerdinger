@@ -11,7 +11,7 @@
       :show-file-list="false"   
       :disabled="!!outdata"             
     >              
-      <el-button type="text" :disabled="!!outdata">{{text}}</el-button>                         
+      <ws-button :disabled="!!outdata">{{text}}</ws-button>                         
     </el-upload>
     <div v-for="(item, index) in outdata" :key="item['__EMPTY']" :id="'main' + index" style="width: 752px;height:452px;display: none"></div>
   </div>
