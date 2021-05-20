@@ -18,6 +18,8 @@
 </template>
 
 <script>
+import JSZip from "jszip";
+import saveAs from "jszip/vendor/FileSaver.js";
 import * as echarts from 'echarts';
 export default {
   name: 'App',
@@ -28,6 +30,7 @@ export default {
       outdata: null,
       text: '点击上传',
       average: null,
+      imageArr: []
     }
   },
   methods: {
@@ -56,6 +59,7 @@ export default {
           outdata.forEach((item,index) => {
             this.echartsInit(item, index)
           })                    
+          this.zipclick(this.imageArr)
         })
 
         
@@ -105,7 +109,11 @@ export default {
         myChart.setOption(option);
 
         var picInfo = myChart.getDataURL();
-        this.downloadFile(text, picInfo)
+        // this.downloadFile(text, picInfo)
+        this.imageArr.push({
+          name: text,
+          base64: picInfo
+        })
     },
     isNumber(val) {
     　　if (parseFloat(val).toString() == "NaN") {
@@ -131,7 +139,38 @@ export default {
           a.setAttribute('download', title)
           a.click()
         // }
-    }
+    },
+    getBase64Image(img) {
+      var canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      var ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, img.width, img.height);
+      var dataURL = canvas.toDataURL();  // 可选其他值 image/jpeg
+      console.log(dataURL,'dataUrl')
+      return dataURL;
+    },
+    main(data, cb) {
+        let that = this;
+        var image = new Image();
+        image.src = data.img_url + '?v=' + Math.random(); // 处理缓存
+        image.crossOrigin = "*";  // 支持跨域图片
+        image.onload = function(){
+          var base64 = that.getBase64Image(image);
+          cb && cb(base64);
+        }
+    },
+    zipclick(baseArr) {
+      var zip = new JSZip();
+      var img = zip.folder("images");
+      for(let i = 0;i < baseArr.length;i ++){
+          img.file(baseArr[i].name + ".png", baseArr[i].base64.replace(/^data:image\/(png|jpg);base64,/, ""), {base64: true});
+      }
+      zip.generateAsync({type:"blob"})
+      .then(function(content) {
+          saveAs(content, "output.zip");
+      });
+    },
   }
 }
 </script>
